@@ -1,4 +1,6 @@
 import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.Scanner;
 
 public class PA5 {
     /* Construct the graph based on the input numbers */
@@ -49,11 +51,129 @@ public class PA5 {
         return 0;
     }
 
+    /* https://www.geeksforgeeks.org/dsa/ford-fulkerson-algorithm-for-maximum-flow-problem/ */
+    public boolean breadthFirstSearch(int[][] residualGraph, int s, int t, int[] parent) {
+        int numberOfNodes = residualGraph.length;
+        // Create a visited array and mark all vertices as not visited
+        boolean[] visited = new boolean[numberOfNodes];
+        for (int i = 0; i < numberOfNodes; i++) {
+            visited[i] = false;
+        }
+        // Create a queue, enqueue source vertex and mark source vertex as visited
+        LinkedList<Integer> queue = new LinkedList<Integer>();
+        queue.add(s);
+        visited[s] = true;
+        parent[s] = -1;
+        while (queue.size() != 0) {
+            int u = queue.poll();
+            for (int i = 0; i < numberOfNodes; i++) {
+                if (visited[i] == false && residualGraph[u][i] > 0) {
+                    // If we find a connection to the sink node, then there is no point in BFS anymore, we just have to set its parent and can return true
+                    if (i == t) {
+                        parent[i] = u;
+                        return true;
+                    }
+                    queue.add(i);
+                    parent[i] = u;
+                    visited[i] = true;
+                }
+            }
+        }
+        // Didn't reach sink in BFS starting from source, so return false
+        return false;
+    }
+
+    public int fordFulkerson(int[][] graph, int s, int t) {
+        int u, v;
+        int numberOfNodes = graph.length;
+        // Create a residual graph and fill the residual graph with given capacities in the original graph as residual capacities in residual graph
+        // Residual graph where residualGraph[i][j] indicates residual capacity of edge from i to j unless residualGraph[i][j] is 0
+        int[][] residualGraph = new int[numberOfNodes][numberOfNodes];
+        for (u = 0; u < numberOfNodes; u++) {
+            for (v = 0; v < numberOfNodes; v++) {
+                residualGraph[u][v] = graph[u][v];
+            }
+        }
+        // This array is filled by BFS and to store path
+        int[] parent = new int[numberOfNodes];
+        // There is no max flow initially
+        int maxFlow = 0;
+        // Augment the flow while there is path from source to sink
+        while (breadthFirstSearch(residualGraph, s, t, parent)) {
+            // Find minimum residual capacity of the edges along the path filled by BFS
+            int pathFlow = Integer.MAX_VALUE;
+            for (v = t; v != s; v = parent[v]) {
+                u = parent[v];
+                pathFlow = Math.min(pathFlow, residualGraph[u][v]);
+            }
+            for (v = t; v != s; v = parent[v]) {
+                u = parent[v];
+                residualGraph[u][v] -= pathFlow;
+                residualGraph[v][u] += pathFlow;
+            }
+            maxFlow += pathFlow;
+        }
+        return maxFlow;
+    }
+
     public String backtrackPath() {
         return "";
     }
 
     public static void main(String[] args) {
-        System.out.println("Hi");
+        Scanner scanner = new Scanner(System.in);
+        int testCases = scanner.nextInt();
+        scanner.nextLine();
+        for (int i = 0; i < testCases; i++) {
+            String line = scanner.nextLine();
+            Scanner lineScan = new Scanner(line);
+            int c = lineScan.nextInt();
+            int r = lineScan.nextInt();
+            int t = lineScan.nextInt();
+            int p = lineScan.nextInt();
+            int proctorCapacity = lineScan.nextInt();
+            String classSize = scanner.nextLine();
+            String roomSize = scanner.nextLine();
+            Scanner classSizeLineScan = new Scanner(classSize);
+            Scanner roomSizeLineScan = new Scanner(roomSize);
+            int[] classSizes = new int[c];
+            int[] roomSizes = new int[r];
+            for (int j = 0; j < c; j++) {
+                classSizes[j] = classSizeLineScan.nextInt();
+            }
+            for (int j = 0; j < r; j++) {
+                roomSizes[j] = roomSizeLineScan.nextInt();
+            }
+            ArrayList<ArrayList<Integer>> proctorAvailability = new ArrayList<>();
+            for (int j = 0; j < p; j++) {
+                String proctor = scanner.nextLine();
+                Scanner proctorLineScan = new Scanner(proctor);
+                int numberOfTimesAvailable = proctorLineScan.nextInt();
+                ArrayList<Integer> thisProctor = new ArrayList<>();
+                for (int k = 0; k < numberOfTimesAvailable; k++) {
+                    thisProctor.add(proctorLineScan.nextInt());
+                }
+                proctorAvailability.add(thisProctor);
+            }
+            // testing input readability
+            System.out.println(testCases);
+            System.out.println(c + " " + r + " " + t + " " + p + " " + proctorCapacity);
+            System.out.println();
+            for (int j = 0; j < classSizes.length; j++) {
+                System.out.print(classSizes[j] + " ");
+            }
+            System.out.println();
+            for (int j = 0; j < roomSizes.length; j++) {
+                System.out.print(roomSizes[j] + " ");
+            }
+            System.out.println();
+            for (ArrayList<Integer> proctorAvailabilityList : proctorAvailability) {
+                for (int availability : proctorAvailabilityList) {
+                    System.out.println(availability + " ");
+                }
+                System.out.println();
+            }
+            // test successful
+        }
     }
 }
