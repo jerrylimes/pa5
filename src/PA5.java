@@ -4,7 +4,7 @@ import java.util.Scanner;
 
 public class PA5 {
     /* Construct the graph based on the input numbers */
-    public int[][] constructGraph(int c, int r, int t, int p, int proctorCapacity, int[] classSizes, int[] roomSizes, ArrayList<ArrayList<Integer>> proctorAvailability) {
+    public static int[][] constructGraph(int c, int r, int t, int p, int proctorCapacity, int[] classSizes, int[] roomSizes, ArrayList<ArrayList<Integer>> proctorAvailability) {
         /* there are a total of numberOfNodes nodes, including source and sink */
         int numberOfNodes = 2 + c + r + t + p;
         int[][] graph = new int[numberOfNodes][numberOfNodes];
@@ -52,7 +52,7 @@ public class PA5 {
     }
 
     /* https://www.geeksforgeeks.org/dsa/ford-fulkerson-algorithm-for-maximum-flow-problem/ */
-    public boolean breadthFirstSearch(int[][] residualGraph, int s, int t, int[] parent) {
+    public static boolean breadthFirstSearch(int[][] residualGraph, int s, int t, int[] parent) {
         int numberOfNodes = residualGraph.length;
         // Create a visited array and mark all vertices as not visited
         boolean[] visited = new boolean[numberOfNodes];
@@ -83,7 +83,7 @@ public class PA5 {
         return false;
     }
 
-    public int fordFulkerson(int[][] graph, int s, int t) {
+    public static int fordFulkerson(int[][] graph, int s, int t) {
         int u, v;
         int numberOfNodes = graph.length;
         // Create a residual graph and fill the residual graph with given capacities in the original graph as residual capacities in residual graph
@@ -156,24 +156,11 @@ public class PA5 {
                 proctorAvailability.add(thisProctor);
             }
             // testing input readability
-            System.out.println(testCases);
-            System.out.println(c + " " + r + " " + t + " " + p + " " + proctorCapacity);
-            System.out.println();
-            for (int j = 0; j < classSizes.length; j++) {
-                System.out.print(classSizes[j] + " ");
-            }
-            System.out.println();
-            for (int j = 0; j < roomSizes.length; j++) {
-                System.out.print(roomSizes[j] + " ");
-            }
-            System.out.println();
-            for (ArrayList<Integer> proctorAvailabilityList : proctorAvailability) {
-                for (int availability : proctorAvailabilityList) {
-                    System.out.println(availability + " ");
-                }
-                System.out.println();
-            }
             // test successful
+            int[][] graph = constructGraph(c, r, t, p, proctorCapacity, classSizes, roomSizes, proctorAvailability);
+            int numberOfNodes = 2 + c + r + t + p;
+            System.out.println(fordFulkerson(graph, 0, numberOfNodes - 1));
+            // Ford-Fulkerson successful!
         }
     }
 }
