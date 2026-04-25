@@ -93,31 +93,40 @@ public class PA5 {
         System.out.println(maxFlowInt);
         Map<DefaultWeightedEdge, Double> flowMap = result.getFlowMap();
         for (DefaultWeightedEdge e : graph.edgeSet()) {
-            String path = "";
-            if (flowMap.get(e) == 1.0) {
-                int edgeSource = graph.getEdgeSource(e);
-                int edgeTarget = graph.getEdgeTarget(e);
-                if ((edgeSource >= 1 && edgeSource < 1 + classSize) && (edgeTarget >= 1 + classSize && edgeTarget < 1 + classSize + roomSize)) {
-                    int roomIndex = edgeTarget - (1 + classSize);
-                    int roomNode = edgeTarget;
-                    path += "c" + (edgeSource - 1) + " - r" + roomIndex;
+            double flow = flowMap.get(e);
+            if (flow > 0) {
+                int u = graph.getEdgeSource(e);
+                int v = graph.getEdgeTarget(e);
+                if (u >= 1 && u < 1 + classSize && v >= 1 + classSize && v < 1 + classSize + roomSize) {
+                    int roomNode = v;
                     int timeNode = -1;
                     for (DefaultWeightedEdge e2 : graph.outgoingEdgesOf(roomNode)) {
                         int next = graph.getEdgeTarget(e2);
-                        if (flowMap.get(e2) == 1.0) {
-                            System.out.print(path + " - t" + (next - 1 - classSize - roomSize) + " ");
+                        if (flowMap.get(e2) == 1.0 && next >= 1 + classSize + roomSize && next < 1 + classSize + roomSize + timeSlot) {
+                            timeNode = next;
+                            break;
                         }
-                        // everything works thus far
                     }
+                    int proctorNode = -1;
                     if (timeNode != -1) {
-                        int timeIndex = timeNode - (1 + classSize + roomSize);
-                        path += " - t" + timeIndex;
+                        for (DefaultWeightedEdge e3 : graph.outgoingEdgesOf(timeNode)) {
+                            int next = graph.getEdgeTarget(e3);
+                            if (flowMap.get(e3) == 1.0 & next >= 1 + classSize + roomSize + timeSlot && next < 1 + classSize + roomSize + timeSlot + proctor) {
+                                proctorNode = next;
+                                break;
+                            }
+                        }
                     }
-                    System.out.println();
+                    if (timeNode != -1 && proctorNode != -1) {
+                        int classIndex = u - 1;
+                        int roomIndex = v - (1 + classSize);
+                        int timeIndex = timeNode - (1 + classSize + roomSize);
+                        int proctorIndex = proctorNode - (1 + classSize + roomSize + timeSlot);
+                        System.out.println("c" + classIndex + " - r" + roomIndex + " - t" + timeIndex + " - p" + proctorIndex);
+                    }
                 }
             }
         }
-        // four instance variables are received correctly
     }
 
     public static void main(String[] args) {
@@ -160,7 +169,6 @@ public class PA5 {
             // testing Ford-Fulkerson
             Graph<Integer, DefaultWeightedEdge> graph = constructGraph(c, r, t, p, proctorCapacity, classSizes, roomSizes, proctorAvailability);
             int numberOfNodes = 2 + c + r + t + p;
-            // Max Flow is processing the graph correctly
             backtrackPath(graph, 0, numberOfNodes - 1);
             // Ford-Fulkerson successful!
         }
