@@ -1,28 +1,58 @@
+import org.jgrapht.Graph;
+import org.jgrapht.alg.flow.EdmondsKarpMFImpl;
+import org.jgrapht.alg.interfaces.MaximumFlowAlgorithm;
+import org.jgrapht.graph.DefaultDirectedWeightedGraph;
+import org.jgrapht.graph.DefaultWeightedEdge;
+
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Scanner;
 
 public class PA5 {
+    private static int classSize;
+    private static int roomSize;
+    private static int timeSlot;
+    private static int proctor;
+
     /* Construct the graph based on the input numbers */
-    public static int[][] constructGraph(int c, int r, int t, int p, int proctorCapacity, int[] classSizes, int[] roomSizes, ArrayList<ArrayList<Integer>> proctorAvailability) {
+    public static Graph<Integer, DefaultWeightedEdge> constructGraph(int c, int r, int t, int p, int proctorCapacity, int[] classSizes, int[] roomSizes, ArrayList<ArrayList<Integer>> proctorAvailability) {
         /* there are a total of numberOfNodes nodes, including source and sink */
         int numberOfNodes = 2 + c + r + t + p;
-        int[][] graph = new int[numberOfNodes][numberOfNodes];
+        classSize = c;
+        roomSize = r;
+        timeSlot = t;
+        proctor = p;
+        Graph<Integer, DefaultWeightedEdge> graph = new DefaultDirectedWeightedGraph<>(DefaultWeightedEdge.class);
+        for (int i = 0; i < numberOfNodes; i++) {
+            graph.addVertex(i);
+        }
         /* source cannot connect to itself; start from the second column */
         for (int i = 1; i < 1 + c; i++) {
             /* source node is connected to every class */
-            graph[0][i] = 1;
+            DefaultWeightedEdge e = graph.addEdge(0, i);
+            if (e != null) {
+                graph.setEdgeWeight(e, 1);
+            }
         }
         /* skip all the columns of classes and rooms and times and the source node; start from proctors */
+        int sink = numberOfNodes - 1;
         for (int i = 1 + c + r + t; i < 1 + c + r + t + p; i++) {
             /* every proctor node is connected to the sink node with the capacity being the proctorCapacity*/
-            graph[i][numberOfNodes - 1] = proctorCapacity;
+            DefaultWeightedEdge e = graph.addEdge(i, sink);
+            if (e != null) {
+                graph.setEdgeWeight(e, proctorCapacity);
+            }
         }
         /* any exam could potentially be at any time, so every room connects to every time */
         for (int i = 1 + c; i < 1 + c + r; i++) {
             for (int j = 1 + c + r; j < 1 + c + r + t; j++) {
                 /* for every room i, and every time j */
-                graph[i][j] = 1;
+                DefaultWeightedEdge e = graph.addEdge(i, j);
+                if (e != null) {
+                    graph.setEdgeWeight(e, 1);
+                }
             }
         }
         /* can a room hold all the students in a class? let's find out */
@@ -32,7 +62,10 @@ public class PA5 {
                 int classIndex = i - 1;
                 int roomIndex = j - (1 + c);
                 if (classSizes[classIndex] <= roomSizes[roomIndex]) {
-                    graph[i][j] = 1;
+                    DefaultWeightedEdge e = graph.addEdge(i, j);
+                    if (e != null) {
+                        graph.setEdgeWeight(e, 1);
+                    }
                 }
             }
         }
@@ -41,126 +74,123 @@ public class PA5 {
             int proctorNode = 1 + c + r + t + proctorIndex;
             for (int time : proctorAvailability.get(proctorIndex)) {
                 int availableTime = 1 + c + r + time;
-                graph[availableTime][proctorNode] = 1;
+                DefaultWeightedEdge e = graph.addEdge(availableTime, proctorNode);
+                if (e != null) {
+                    graph.setEdgeWeight(e, 1);
+                }
             }
         }
         return graph;
     }
 
-    public int bipartiteMatching() {
-        return 0;
+    public static MaximumFlowAlgorithm.MaximumFlow<DefaultWeightedEdge> bipartiteMatching(Graph<Integer, DefaultWeightedEdge> graph, int source, int sink) {
+        EdmondsKarpMFImpl<Integer, DefaultWeightedEdge> mf = new EdmondsKarpMFImpl<>(graph);
+        return mf.getMaximumFlow(source, sink);
     }
 
-    /* https://www.geeksforgeeks.org/dsa/ford-fulkerson-algorithm-for-maximum-flow-problem/ */
-    public static boolean breadthFirstSearch(int[][] residualGraph, int s, int t, int[] parent) {
-        int numberOfNodes = residualGraph.length;
-        // Create a visited array and mark all vertices as not visited
-        boolean[] visited = new boolean[numberOfNodes];
-        for (int i = 0; i < numberOfNodes; i++) {
-            visited[i] = false;
-        }
-        // Create a queue, enqueue source vertex and mark source vertex as visited
-        LinkedList<Integer> queue = new LinkedList<Integer>();
-        queue.add(s);
-        visited[s] = true;
-        parent[s] = -1;
-        while (queue.size() != 0) {
-            int u = queue.poll();
-            for (int i = 0; i < numberOfNodes; i++) {
-                if (visited[i] == false && residualGraph[u][i] > 0) {
-                    // If we find a connection to the sink node, then there is no point in BFS anymore, we just have to set its parent and can return true
-                    if (i == t) {
-                        parent[i] = u;
-                        return true;
+    public static void backtrackPath(Graph<Integer, DefaultWeightedEdge> graph, int source, int sink) {
+        var result = bipartiteMatching(graph, source, sink);
+        double maxFlow = result.getValue();
+        int maxFlowInt = (int) maxFlow;
+        System.out.println(maxFlowInt);
+        Map<DefaultWeightedEdge, Double> flowMap = result.getFlowMap();
+        for (DefaultWeightedEdge e : graph.edgeSet()) {
+            String path = "";
+            if (flowMap.get(e) == 1.0) {
+                int edgeSource = graph.getEdgeSource(e);
+                int edgeTarget = graph.getEdgeTarget(e);
+                if ((edgeSource >= 1 && edgeSource < 1 + classSize) && (edgeTarget >= 1 + classSize && edgeTarget < 1 + classSize + roomSize)) {
+                    int roomIndex = edgeTarget - (1 + classSize);
+                    int roomNode = edgeTarget;
+                    path += "c" + (edgeSource - 1) + " - r" + roomIndex;
+                    int timeNode = -1;
+                    for (DefaultWeightedEdge e2 : graph.outgoingEdgesOf(roomNode)) {
+                        int next = graph.getEdgeTarget(e2);
+                        if (flowMap.get(e2) == 1.0) {
+                            for (DefaultWeightedEdge e3 : graph.outgoingEdgesOf(next)) {
+                                if (flowMap.get(e3) == 1.0) {
+                                    System.out.println(e + " - " + e2 + " - " + e3);
+                                }
+                            }
+                        }
+                        // everything works thus far
                     }
-                    queue.add(i);
-                    parent[i] = u;
-                    visited[i] = true;
+                    if (timeNode != -1) {
+                        int timeIndex = timeNode - (1 + classSize + roomSize);
+                        path += " - t" + timeIndex;
+                    }
+                    System.out.println();
                 }
             }
         }
-        // Didn't reach sink in BFS starting from source, so return false
-        return false;
-    }
-
-    public static int fordFulkerson(int[][] graph, int s, int t) {
-        int u, v;
-        int numberOfNodes = graph.length;
-        // Create a residual graph and fill the residual graph with given capacities in the original graph as residual capacities in residual graph
-        // Residual graph where residualGraph[i][j] indicates residual capacity of edge from i to j unless residualGraph[i][j] is 0
-        int[][] residualGraph = new int[numberOfNodes][numberOfNodes];
-        for (u = 0; u < numberOfNodes; u++) {
-            for (v = 0; v < numberOfNodes; v++) {
-                residualGraph[u][v] = graph[u][v];
-            }
-        }
-        // This array is filled by BFS and to store path
-        int[] parent = new int[numberOfNodes];
-        // There is no max flow initially
-        int maxFlow = 0;
-        // Augment the flow while there is path from source to sink
-        while (breadthFirstSearch(residualGraph, s, t, parent)) {
-            // Find minimum residual capacity of the edges along the path filled by BFS
-            int pathFlow = Integer.MAX_VALUE;
-            for (v = t; v != s; v = parent[v]) {
-                u = parent[v];
-                pathFlow = Math.min(pathFlow, residualGraph[u][v]);
-            }
-            for (v = t; v != s; v = parent[v]) {
-                u = parent[v];
-                residualGraph[u][v] -= pathFlow;
-                residualGraph[v][u] += pathFlow;
-            }
-            maxFlow += pathFlow;
-        }
-        return maxFlow;
-    }
-
-    public String backtrackPath() {
-        return "";
+        // four instance variables are received correctly
     }
 
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        int testCases = scanner.nextInt();
-        scanner.nextLine();
-        for (int i = 0; i < testCases; i++) {
-            String line = scanner.nextLine();
-            Scanner lineScan = new Scanner(line);
-            int c = lineScan.nextInt();
-            int r = lineScan.nextInt();
-            int t = lineScan.nextInt();
-            int p = lineScan.nextInt();
-            int proctorCapacity = lineScan.nextInt();
-            String classSize = scanner.nextLine();
-            String roomSize = scanner.nextLine();
-            Scanner classSizeLineScan = new Scanner(classSize);
-            Scanner roomSizeLineScan = new Scanner(roomSize);
-            int[] classSizes = new int[c];
-            int[] roomSizes = new int[r];
-            for (int j = 0; j < c; j++) {
-                classSizes[j] = classSizeLineScan.nextInt();
+        int hardCodedC = 9;
+        int hardCodedR = 5;
+        int hardCodedT = 4;
+        int hardCodedP = 7;
+        int hardCodedProctorCapacity = 5;
+        int[] hardCodedClassSizes = {12, 20, 34, 57, 63, 63, 87, 153, 725};
+        int[] hardCodedRoomSizes = {18, 48, 72, 100, 850};
+        ArrayList<ArrayList<Integer>> hardCodedProctorAvailability = new ArrayList<>();
+        int[][] hardCodedProctor = {{0, 1}, {0}, {0, 2}, {0, 1, 2}, {1, 2, 3}, {2, 3}, {1, 3}};
+        for (int j = 0; j < hardCodedProctor.length; j++) {
+            ArrayList<Integer> a = new ArrayList<>();
+            for (int k = 0; k < hardCodedProctor[j].length; k++) {
+                a.add(hardCodedProctor[j][k]);
             }
-            for (int j = 0; j < r; j++) {
-                roomSizes[j] = roomSizeLineScan.nextInt();
-            }
-            ArrayList<ArrayList<Integer>> proctorAvailability = new ArrayList<>();
-            for (int j = 0; j < p; j++) {
-                String proctor = scanner.nextLine();
-                Scanner proctorLineScan = new Scanner(proctor);
-                int numberOfTimesAvailable = proctorLineScan.nextInt();
-                ArrayList<Integer> thisProctor = new ArrayList<>();
-                for (int k = 0; k < numberOfTimesAvailable; k++) {
-                    thisProctor.add(proctorLineScan.nextInt());
-                }
-                proctorAvailability.add(thisProctor);
-            }
-            // testing input readability
-            // test successful
-            int[][] graph = constructGraph(c, r, t, p, proctorCapacity, classSizes, roomSizes, proctorAvailability);
-            int numberOfNodes = 2 + c + r + t + p;
-            System.out.println(fordFulkerson(graph, 0, numberOfNodes - 1));
-            // Ford-Fulkerson successful!
+            hardCodedProctorAvailability.add(a);
         }
+//            Graph<Integer, DefaultWeightedEdge> graph = constructGraph(c, r, t, p, proctorCapacity, classSizes, roomSizes, proctorAvailability);
+        Graph<Integer, DefaultWeightedEdge> graph = constructGraph(hardCodedC, hardCodedR, hardCodedT, hardCodedP, hardCodedProctorCapacity, hardCodedClassSizes, hardCodedRoomSizes, hardCodedProctorAvailability);
+        int numberOfNodes = 2 + hardCodedC + hardCodedR + hardCodedT + hardCodedP;
+        backtrackPath(graph, 0, numberOfNodes - 1);
+//        Scanner scanner = new Scanner(System.in);
+//        int testCases = scanner.nextInt();
+//        scanner.nextLine();
+//        for (int i = 0; i < testCases; i++) {
+//            String line = scanner.nextLine();
+//            Scanner lineScan = new Scanner(line);
+//            int c = lineScan.nextInt();
+//            int r = lineScan.nextInt();
+//            int t = lineScan.nextInt();
+//            int p = lineScan.nextInt();
+//            int proctorCapacity = lineScan.nextInt();
+//            String classSize = scanner.nextLine();
+//            String roomSize = scanner.nextLine();
+//            Scanner classSizeLineScan = new Scanner(classSize);
+//            Scanner roomSizeLineScan = new Scanner(roomSize);
+//            int[] classSizes = new int[c];
+//            int[] roomSizes = new int[r];
+//            for (int j = 0; j < c; j++) {
+//                classSizes[j] = classSizeLineScan.nextInt();
+//            }
+//            for (int j = 0; j < r; j++) {
+//                roomSizes[j] = roomSizeLineScan.nextInt();
+//            }
+//            ArrayList<ArrayList<Integer>> proctorAvailability = new ArrayList<>();
+//            for (int j = 0; j < p; j++) {
+//                String proctor = scanner.nextLine();
+//                Scanner proctorLineScan = new Scanner(proctor);
+//                int numberOfTimesAvailable = proctorLineScan.nextInt();
+//                ArrayList<Integer> thisProctor = new ArrayList<>();
+//                for (int k = 0; k < numberOfTimesAvailable; k++) {
+//                    thisProctor.add(proctorLineScan.nextInt());
+//                }
+//                proctorAvailability.add(thisProctor);
+//            }
+
+        // testing input readability
+        // test successful
+        // testing Ford-Fulkerson
+        // testing JGraphT
+        // example input will be hard-coded
+//            int numberOfNodes = 2 + c + r + t + p;
+        // Max Flow is processing the graph correctly
+//            System.out.println(bipartiteMatching(graph, 0, numberOfNodes - 1));
+        // Ford-Fulkerson successful!
+//        }
     }
 }
