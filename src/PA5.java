@@ -104,16 +104,46 @@ public class PA5 {
                     int timeNode = -1;
                     for (DefaultWeightedEdge e2 : graph.outgoingEdgesOf(roomNode)) {
                         int next = graph.getEdgeTarget(e2);
-                        if (flowMap.get(e2) == 1.0) {
-                            System.out.print(path + " - t" + (next - 1 - classSize - roomSize) + " ");
+                        if (flowMap.get(e2) == 1.0 && next >= 1 + classSize + roomSize && next < 1 + classSize + roomSize + timeSlot) {
+                            boolean timeConnectedToProctor = false;
+                            for (DefaultWeightedEdge e3 : graph.outgoingEdgesOf(next)) {
+                                int nextProctor = graph.getEdgeTarget(e3);
+                                if (flowMap.get(e3) == 1.0 && nextProctor >= 1 + classSize + roomSize + timeSlot && nextProctor < 1 + classSize + roomSize + timeSlot + proctor) {
+                                    timeConnectedToProctor = true;
+                                    break;
+                                }
+                            }
+                            if (timeConnectedToProctor) {
+                                timeNode = next;
+                                break;
+                            }
                         }
                         // everything works thus far
                     }
+                    int proctorNode = -1;
+
                     if (timeNode != -1) {
-                        int timeIndex = timeNode - (1 + classSize + roomSize);
-                        path += " - t" + timeIndex;
+                        for (DefaultWeightedEdge e3 : graph.outgoingEdgesOf(timeNode)) {
+                            int next = graph.getEdgeTarget(e3);
+
+                            if (flowMap.get(e3) == 1.0 &&
+                                    next >= 1 + classSize + roomSize + timeSlot &&
+                                    next < 1 + classSize + roomSize + timeSlot + proctor) {
+
+                                proctorNode = next;
+                                break;
+                            }
+                        }
                     }
-                    System.out.println();
+                    if (timeNode != -1 && proctorNode != -1) {
+                        int timeIndex = timeNode - (1 + classSize + roomSize);
+                        int proctorIndex = proctorNode - (1 + classSize + roomSize + timeSlot);
+
+                        path += " - t" + timeIndex + " - p" + proctorIndex;
+                        System.out.println(path);
+                    } else {
+                        System.out.println(path); // fallback (shouldn't normally happen)
+                    }
                 }
             }
         }
