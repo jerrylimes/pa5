@@ -1,12 +1,25 @@
+import org.jgrapht.Graph;
+import org.jgrapht.graph.DefaultWeightedEdge;
+
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.Scanner;
 
-public class PA5 {
+public class PA5Independent {
+    private static int[][] residualGraph;
+    private static int c;
+    private static int r;
+    private static int t;
+    private static int p;
+
     /* Construct the graph based on the input numbers */
     public static int[][] constructGraph(int c, int r, int t, int p, int proctorCapacity, int[] classSizes, int[] roomSizes, ArrayList<ArrayList<Integer>> proctorAvailability) {
         /* there are a total of numberOfNodes nodes, including source and sink */
         int numberOfNodes = 2 + c + r + t + p;
+        PA5Independent.c = c;
+        PA5Independent.r = r;
+        PA5Independent.t = t;
+        PA5Independent.p = p;
         int[][] graph = new int[numberOfNodes][numberOfNodes];
         /* source cannot connect to itself; start from the second column */
         for (int i = 1; i < 1 + c; i++) {
@@ -113,55 +126,111 @@ public class PA5 {
             }
             maxFlow += pathFlow;
         }
+        setResidualGraph(residualGraph);
         return maxFlow;
     }
 
-    public String backtrackPath() {
+    public static int[][] getResidualGraph() {
+        return residualGraph;
+    }
+
+    public static void setResidualGraph(int[][] residualGraph) {
+        PA5Independent.residualGraph = residualGraph;
+    }
+
+    public static String backtrackPath() {
         return "";
     }
 
+    public static void pathFinder(int[][] graph) {
+
+    }
+
+    public static void sinkToClass() {
+
+    }
+
+    public static void classToRoom() {
+
+    }
+
+    public static void roomToTime() {
+
+    }
+
+    public static void timeToProctor() {
+
+    }
+
+    public static void proctorToSink() {
+
+    }
+
+//    public static void main(String[] args) {
+//        Scanner scanner = new Scanner(System.in);
+//        int testCases = scanner.nextInt();
+//        scanner.nextLine();
+//        for (int i = 0; i < testCases; i++) {
+//            String line = scanner.nextLine();
+//            Scanner lineScan = new Scanner(line);
+//            int c = lineScan.nextInt();
+//            int r = lineScan.nextInt();
+//            int t = lineScan.nextInt();
+//            int p = lineScan.nextInt();
+//            int proctorCapacity = lineScan.nextInt();
+//            String classSize = scanner.nextLine();
+//            String roomSize = scanner.nextLine();
+//            Scanner classSizeLineScan = new Scanner(classSize);
+//            Scanner roomSizeLineScan = new Scanner(roomSize);
+//            int[] classSizes = new int[c];
+//            int[] roomSizes = new int[r];
+//            for (int j = 0; j < c; j++) {
+//                classSizes[j] = classSizeLineScan.nextInt();
+//            }
+//            for (int j = 0; j < r; j++) {
+//                roomSizes[j] = roomSizeLineScan.nextInt();
+//            }
+//            ArrayList<ArrayList<Integer>> proctorAvailability = new ArrayList<>();
+//            for (int j = 0; j < p; j++) {
+//                String proctor = scanner.nextLine();
+//                Scanner proctorLineScan = new Scanner(proctor);
+//                int numberOfTimesAvailable = proctorLineScan.nextInt();
+//                ArrayList<Integer> thisProctor = new ArrayList<>();
+//                for (int k = 0; k < numberOfTimesAvailable; k++) {
+//                    thisProctor.add(proctorLineScan.nextInt());
+//                }
+//                proctorAvailability.add(thisProctor);
+//            }
+//            // testing input readability
+//            // test successful
+//            int[][] graph = constructGraph(c, r, t, p, proctorCapacity, classSizes, roomSizes, proctorAvailability);
+//            int numberOfNodes = 2 + c + r + t + p;
+//            System.out.println(fordFulkerson(graph, 0, numberOfNodes - 1));
+//            // Ford-Fulkerson successful!
+//        }
+//    }
+
     public static void main(String[] args) {
-        Scanner scanner = new Scanner(System.in);
-        int testCases = scanner.nextInt();
-        scanner.nextLine();
-        for (int i = 0; i < testCases; i++) {
-            String line = scanner.nextLine();
-            Scanner lineScan = new Scanner(line);
-            int c = lineScan.nextInt();
-            int r = lineScan.nextInt();
-            int t = lineScan.nextInt();
-            int p = lineScan.nextInt();
-            int proctorCapacity = lineScan.nextInt();
-            String classSize = scanner.nextLine();
-            String roomSize = scanner.nextLine();
-            Scanner classSizeLineScan = new Scanner(classSize);
-            Scanner roomSizeLineScan = new Scanner(roomSize);
-            int[] classSizes = new int[c];
-            int[] roomSizes = new int[r];
-            for (int j = 0; j < c; j++) {
-                classSizes[j] = classSizeLineScan.nextInt();
+        int hardCodedC = 9;
+        int hardCodedR = 5;
+        int hardCodedT = 4;
+        int hardCodedP = 7;
+        int hardCodedProctorCapacity = 5;
+        int[] hardCodedClassSizes = {12, 20, 34, 57, 63, 63, 87, 153, 725};
+        int[] hardCodedRoomSizes = {18, 48, 72, 100, 850};
+        ArrayList<ArrayList<Integer>> hardCodedProctorAvailability = new ArrayList<>();
+        int[][] hardCodedProctor = {{0, 1}, {0}, {0, 2}, {0, 1, 2}, {1, 2, 3}, {2, 3}, {1, 3}};
+        for (int j = 0; j < hardCodedProctor.length; j++) {
+            ArrayList<Integer> a = new ArrayList<>();
+            for (int k = 0; k < hardCodedProctor[j].length; k++) {
+                a.add(hardCodedProctor[j][k]);
             }
-            for (int j = 0; j < r; j++) {
-                roomSizes[j] = roomSizeLineScan.nextInt();
-            }
-            ArrayList<ArrayList<Integer>> proctorAvailability = new ArrayList<>();
-            for (int j = 0; j < p; j++) {
-                String proctor = scanner.nextLine();
-                Scanner proctorLineScan = new Scanner(proctor);
-                int numberOfTimesAvailable = proctorLineScan.nextInt();
-                ArrayList<Integer> thisProctor = new ArrayList<>();
-                for (int k = 0; k < numberOfTimesAvailable; k++) {
-                    thisProctor.add(proctorLineScan.nextInt());
-                }
-                proctorAvailability.add(thisProctor);
-            }
-            // testing input readability
-            // test successful
-            int[][] graph = constructGraph(c, r, t, p, proctorCapacity, classSizes, roomSizes, proctorAvailability);
-            int numberOfNodes = 2 + c + r + t + p;
-            System.out.println(fordFulkerson(graph, 0, numberOfNodes - 1));
-            System.out.println(-1);
-            // Ford-Fulkerson successful!
+            hardCodedProctorAvailability.add(a);
         }
+//            Graph<Integer, DefaultWeightedEdge> graph = constructGraph(c, r, t, p, proctorCapacity, classSizes, roomSizes, proctorAvailability);
+        int[][] graph = constructGraph(hardCodedC, hardCodedR, hardCodedT, hardCodedP, hardCodedProctorCapacity, hardCodedClassSizes, hardCodedRoomSizes, hardCodedProctorAvailability);
+        int numberOfNodes = 2 + hardCodedC + hardCodedR + hardCodedT + hardCodedP;
+        int maxFlow = fordFulkerson(graph, 0, numberOfNodes - 1);
+        System.out.println(maxFlow);
     }
 }
