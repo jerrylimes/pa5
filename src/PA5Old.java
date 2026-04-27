@@ -1,13 +1,14 @@
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.Scanner;
+
 import org.jgrapht.Graph;
 import org.jgrapht.alg.flow.EdmondsKarpMFImpl;
 import org.jgrapht.alg.interfaces.MaximumFlowAlgorithm;
 import org.jgrapht.graph.DefaultDirectedWeightedGraph;
 import org.jgrapht.graph.DefaultWeightedEdge;
 
-import java.util.ArrayList;
-import java.util.Map;
-
-public class PA5Import {
+public class PA5Old {
     private static int classSize;
     private static int roomSize;
     private static int timeSlot;
@@ -92,43 +93,109 @@ public class PA5Import {
         System.out.println(maxFlowInt);
         Map<DefaultWeightedEdge, Double> flowMap = result.getFlowMap();
         for (DefaultWeightedEdge e : graph.edgeSet()) {
+            String path = "";
             if (flowMap.get(e) == 1.0) {
                 int edgeSource = graph.getEdgeSource(e);
                 int edgeTarget = graph.getEdgeTarget(e);
                 if ((edgeSource >= 1 && edgeSource < 1 + classSize) && (edgeTarget >= 1 + classSize && edgeTarget < 1 + classSize + roomSize)) {
-                    int classIndex = edgeSource - 1;
                     int roomIndex = edgeTarget - (1 + classSize);
                     int roomNode = edgeTarget;
+                    path += "c" + (edgeSource - 1) + " - r" + roomIndex;
                     int timeNode = -1;
-                    int proctorNode = -1;
-
                     for (DefaultWeightedEdge e2 : graph.outgoingEdgesOf(roomNode)) {
                         int next = graph.getEdgeTarget(e2);
-                        if (flowMap.get(e2) == 1.0) {
-                            timeNode = next;
+                        if (flowMap.get(e2) == 1.0 && next >= 1 + classSize + roomSize && next < 1 + classSize + roomSize + timeSlot) {
+                            boolean timeConnectedToProctor = false;
                             for (DefaultWeightedEdge e3 : graph.outgoingEdgesOf(next)) {
-                                if (flowMap.get(e3) == 1.0) {
-                                    proctorNode = graph.getEdgeTarget(e3);
+                                int nextProctor = graph.getEdgeTarget(e3);
+                                if (flowMap.get(e3) == 1.0 && nextProctor >= 1 + classSize + roomSize + timeSlot && nextProctor < 1 + classSize + roomSize + timeSlot + proctor) {
+                                    timeConnectedToProctor = true;
+                                    System.out.println(nextProctor);
                                     break;
                                 }
                             }
-                            break;
+                            if (timeConnectedToProctor) {
+                                timeNode = next;
+                                break;
+                            }
+                        }
+                        // everything works thus far
+                    }
+                    int proctorNode = -1;
+
+                    if (timeNode != -1) {
+                        for (DefaultWeightedEdge e3 : graph.outgoingEdgesOf(timeNode)) {
+                            int next = graph.getEdgeTarget(e3);
+
+                            if (flowMap.get(e3) == 1.0 &&
+                                    next >= 1 + classSize + roomSize + timeSlot &&
+                                    next < 1 + classSize + roomSize + timeSlot + proctor) {
+
+                                proctorNode = next;
+                                break;
+                            }
                         }
                     }
-
                     if (timeNode != -1 && proctorNode != -1) {
                         int timeIndex = timeNode - (1 + classSize + roomSize);
                         int proctorIndex = proctorNode - (1 + classSize + roomSize + timeSlot);
-                        String path = "c" + classIndex
-                                + " - r" + roomIndex
-                                + " - t" + timeIndex
-                                + " - p" + proctorIndex;
+
+                        path += " - t" + timeIndex + " - p" + proctorIndex;
                         System.out.println(path);
+                    } else {
+                        System.out.println(path); // fallback (shouldn't normally happen)
                     }
                 }
             }
         }
+        // four instance variables are received correctly
     }
+
+//    public static void main(String[] args) {
+//        Scanner scanner = new Scanner(System.in);
+//        int testCases = scanner.nextInt();
+//        scanner.nextLine();
+//        for (int i = 0; i < testCases; i++) {
+//            String line = scanner.nextLine();
+//            Scanner lineScan = new Scanner(line);
+//            int c = lineScan.nextInt();
+//            int r = lineScan.nextInt();
+//            int t = lineScan.nextInt();
+//            int p = lineScan.nextInt();
+//            int proctorCapacity = lineScan.nextInt();
+//            String classSize = scanner.nextLine();
+//            String roomSize = scanner.nextLine();
+//            Scanner classSizeLineScan = new Scanner(classSize);
+//            Scanner roomSizeLineScan = new Scanner(roomSize);
+//            int[] classSizes = new int[c];
+//            int[] roomSizes = new int[r];
+//            for (int j = 0; j < c; j++) {
+//                classSizes[j] = classSizeLineScan.nextInt();
+//            }
+//            for (int j = 0; j < r; j++) {
+//                roomSizes[j] = roomSizeLineScan.nextInt();
+//            }
+//            ArrayList<ArrayList<Integer>> proctorAvailability = new ArrayList<>();
+//            for (int j = 0; j < p; j++) {
+//                String proctor = scanner.nextLine();
+//                Scanner proctorLineScan = new Scanner(proctor);
+//                int numberOfTimesAvailable = proctorLineScan.nextInt();
+//                ArrayList<Integer> thisProctor = new ArrayList<>();
+//                for (int k = 0; k < numberOfTimesAvailable; k++) {
+//                    thisProctor.add(proctorLineScan.nextInt());
+//                }
+//                proctorAvailability.add(thisProctor);
+//            }
+//            // testing input readability
+//            // test successful
+//            // testing Ford-Fulkerson
+//            Graph<Integer, DefaultWeightedEdge> graph = constructGraph(c, r, t, p, proctorCapacity, classSizes, roomSizes, proctorAvailability);
+//            int numberOfNodes = 2 + c + r + t + p;
+//            // Max Flow is processing the graph correctly
+//            backtrackPath(graph, 0, numberOfNodes - 1);
+//            // Ford-Fulkerson successful!
+//        }
+//    }
 
     public static void main(String[] args) {
         int hardCodedC = 9;
@@ -151,6 +218,7 @@ public class PA5Import {
         Graph<Integer, DefaultWeightedEdge> graph = constructGraph(hardCodedC, hardCodedR, hardCodedT, hardCodedP, hardCodedProctorCapacity, hardCodedClassSizes, hardCodedRoomSizes, hardCodedProctorAvailability);
         int numberOfNodes = 2 + hardCodedC + hardCodedR + hardCodedT + hardCodedP;
         backtrackPath(graph, 0, numberOfNodes - 1);
+        System.out.println(bipartiteMatching(graph, 0, numberOfNodes - 1));
 //        Scanner scanner = new Scanner(System.in);
 //        int testCases = scanner.nextInt();
 //        scanner.nextLine();
