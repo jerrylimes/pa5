@@ -5,6 +5,9 @@ import org.jgrapht.graph.DefaultDirectedWeightedGraph;
 import org.jgrapht.graph.DefaultWeightedEdge;
 
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class PA5Import {
@@ -12,6 +15,10 @@ public class PA5Import {
     private static int roomSize;
     private static int timeSlot;
     private static int proctor;
+    private static Graph<Integer, DefaultWeightedEdge> constructedGraph = new DefaultDirectedWeightedGraph<>(DefaultWeightedEdge.class);
+    private static String path;
+    private static List<DefaultWeightedEdge> sortedEdges = new ArrayList<>();
+    private static Map<Integer, Integer> timeUsage = new HashMap<>();
 
     /* Construct the graph based on the input numbers */
     public static Graph<Integer, DefaultWeightedEdge> constructGraph(int c, int r, int t, int p, int proctorCapacity, int[] classSizes, int[] roomSizes, ArrayList<ArrayList<Integer>> proctorAvailability) {
@@ -77,58 +84,93 @@ public class PA5Import {
                 }
             }
         }
+        setConstructedGraph(graph);
         return graph;
     }
 
-    public static MaximumFlowAlgorithm.MaximumFlow<DefaultWeightedEdge> bipartiteMatching(Graph<Integer, DefaultWeightedEdge> graph, int source, int sink) {
+    public static MaximumFlowAlgorithm.MaximumFlow<DefaultWeightedEdge> bipartiteMatching(int source, int sink) {
+        Graph<Integer, DefaultWeightedEdge> graph = getConstructedGraph();
         EdmondsKarpMFImpl<Integer, DefaultWeightedEdge> mf = new EdmondsKarpMFImpl<>(graph);
         return mf.getMaximumFlow(source, sink);
     }
 
-    public static void backtrackPath(Graph<Integer, DefaultWeightedEdge> graph, int source, int sink) {
-        var result = bipartiteMatching(graph, source, sink);
-        double maxFlow = result.getValue();
-        int maxFlowInt = (int) maxFlow;
-        System.out.println(maxFlowInt);
+    public static ArrayList<String> backtrackPath(int source, int sink) {
+        sortedEdges.clear();
+        timeUsage.clear();
+        Graph<Integer, DefaultWeightedEdge> graph = getConstructedGraph();
+        ArrayList<String> paths = new ArrayList<>();
+        var result = bipartiteMatching(source, sink);
         Map<DefaultWeightedEdge, Double> flowMap = result.getFlowMap();
+
         for (DefaultWeightedEdge e : graph.edgeSet()) {
-            if (flowMap.get(e) == 1.0) {
-                int edgeSource = graph.getEdgeSource(e);
-                int edgeTarget = graph.getEdgeTarget(e);
-                if ((edgeSource >= 1 && edgeSource < 1 + classSize) && (edgeTarget >= 1 + classSize && edgeTarget < 1 + classSize + roomSize)) {
-                    int classIndex = edgeSource - 1;
-                    int roomIndex = edgeTarget - (1 + classSize);
-                    int roomNode = edgeTarget;
-                    int timeNode = -1;
-                    int proctorNode = -1;
+            if (flowMap.get(e) > 0.0) {
+                sortedEdges.add(e);
+            }
+        }
+        sortedEdges.sort(Comparator.comparingInt(graph::getEdgeSource).thenComparingInt(graph::getEdgeTarget));
+        for (DefaultWeightedEdge e : sortedEdges) {
+            path = "";
+            if (graph.getEdgeSource(e) >= 1 && graph.getEdgeSource(e) < 1 + classSize) {
+                path += "c" + (graph.getEdgeSource(e) - 1) + " - ";
+                processClass(e);
+                paths.add(path);
+            }
+        }
+        // System.out.println(classSize + " " + roomSize + " " + timeSlot + " " + proctor);
+        // instance variables test successful
+        return paths;
+    }
 
-                    for (DefaultWeightedEdge e2 : graph.outgoingEdgesOf(roomNode)) {
-                        int next = graph.getEdgeTarget(e2);
-                        if (flowMap.get(e2) == 1.0) {
-                            timeNode = next;
-                            for (DefaultWeightedEdge e3 : graph.outgoingEdgesOf(next)) {
-                                if (flowMap.get(e3) == 1.0) {
-                                    proctorNode = graph.getEdgeTarget(e3);
-                                    break;
-                                }
-                            }
-                            break;
-                        }
-                    }
+    public static void processClass(DefaultWeightedEdge e) {
+        Graph<Integer, DefaultWeightedEdge> graph = getConstructedGraph();
+        int classNode = graph.getEdgeSource(e);
+        int roomNode = graph.getEdgeTarget(e);
+        int roomIndex = roomNode - (1 + classSize);
+        path += "r" + roomIndex + " - ";
+        processRoom(roomNode);
+    }
 
-                    if (timeNode != -1 && proctorNode != -1) {
-                        int timeIndex = timeNode - (1 + classSize + roomSize);
-                        int proctorIndex = proctorNode - (1 + classSize + roomSize + timeSlot);
-                        String path = "c" + classIndex
-                                + " - r" + roomIndex
-                                + " - t" + timeIndex
-                                + " - p" + proctorIndex;
-                        System.out.println(path);
-                    }
+    public static void processRoom(int roomNode) {
+        Graph<Integer, DefaultWeightedEdge> graph = getConstructedGraph();
+        for (DefaultWeightedEdge e : sortedEdges) {
+            if (graph.getEdgeSource(e) == roomNode) {
+                int timeNode = graph.getEdgeTarget(e);
+                if (timeNode >= 1 + classSize + roomSize && timeNode < 1 + classSize + roomSize + timeSlot) {
+                    int timeIndex = timeNode - (1 + classSize + roomSize);
+                    path += "t" + timeIndex + " - ";
+                    processTime(timeNode);
+                    return;
                 }
             }
         }
     }
+
+    public static void processTime(int timeNode) {
+        Graph<Integer, DefaultWeightedEdge> graph = getConstructedGraph();
+        for (DefaultWeightedEdge e : sortedEdges) {
+            if (graph.getEdgeSource(e) == timeNode) {
+                int proctorNode = graph.getEdgeTarget(e);
+                if (proctorNode >= 1 + classSize + roomSize + timeSlot && proctorNode < 1 + classSize + roomSize + timeSlot + proctor) {
+                    processProctor(proctorNode);
+                    return;
+                }
+            }
+        }
+    }
+
+    public static void processProctor(int proctorNode) {
+        int proctorIndex = proctorNode - (1 + classSize + roomSize + timeSlot);
+        path += "p" + proctorIndex;
+    }
+
+    public static Graph<Integer, DefaultWeightedEdge> getConstructedGraph() {
+        return constructedGraph;
+    }
+
+    public static void setConstructedGraph(Graph<Integer, DefaultWeightedEdge> constructedGraph) {
+        PA5Import.constructedGraph = constructedGraph;
+    }
+
 
     public static void main(String[] args) {
         int hardCodedC = 9;
@@ -148,9 +190,12 @@ public class PA5Import {
             hardCodedProctorAvailability.add(a);
         }
 //            Graph<Integer, DefaultWeightedEdge> graph = constructGraph(c, r, t, p, proctorCapacity, classSizes, roomSizes, proctorAvailability);
-        Graph<Integer, DefaultWeightedEdge> graph = constructGraph(hardCodedC, hardCodedR, hardCodedT, hardCodedP, hardCodedProctorCapacity, hardCodedClassSizes, hardCodedRoomSizes, hardCodedProctorAvailability);
+        constructGraph(hardCodedC, hardCodedR, hardCodedT, hardCodedP, hardCodedProctorCapacity, hardCodedClassSizes, hardCodedRoomSizes, hardCodedProctorAvailability);
         int numberOfNodes = 2 + hardCodedC + hardCodedR + hardCodedT + hardCodedP;
-        backtrackPath(graph, 0, numberOfNodes - 1);
+        ArrayList<String> result = backtrackPath(0, numberOfNodes - 1);
+        for (String str : result) {
+            System.out.println(str);
+        }
 //        Scanner scanner = new Scanner(System.in);
 //        int testCases = scanner.nextInt();
 //        scanner.nextLine();
